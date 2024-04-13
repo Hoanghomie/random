@@ -23,6 +23,9 @@ import { BlockItemTheftAbAttr, DoubleBattleChanceAbAttr, IncrementMovePriorityAb
 import { Abilities } from "./data/enums/abilities";
 import Battle, { BattleType, FixedBattleConfig, fixedBattles } from './battle';
 import { GameMode, GameModes, gameModes } from './game-mode';
+
+import GameModeModifiers from './system/game-mode-modifiers';
+
 import FieldSpritePipeline from './pipelines/field-sprite';
 import SpritePipeline from './pipelines/sprite';
 import PartyExpBar from './ui/party-exp-bar';
@@ -150,6 +153,9 @@ export default class BattleScene extends SceneBase {
 	public arenaNextEnemy: ArenaBase;
 	public arena: Arena;
 	public gameMode: GameMode;
+
+	public gameModeModifiers: GameModeModifiers;
+
 	public score: integer;
 	public lockModifierTiers: boolean;
 	public trainer: Phaser.GameObjects.Sprite;
