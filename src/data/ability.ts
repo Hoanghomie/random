@@ -9,7 +9,7 @@ import { BattlerTag } from "./battler-tags";
 import { BattlerTagType } from "./enums/battler-tag-type";
 import { StatusEffect, getStatusEffectDescriptor, getStatusEffectHealText } from "./status-effect";
 import { Gender } from "./gender";
-import Move, { AttackMove, MoveCategory, MoveFlags, MoveTarget, RecoilAttr, StatusMoveTypeImmunityAttr, allMoves } from "./move";
+import Move, { AttackMove, ExplosiveAttr, MoveCategory, MoveFlags, MoveTarget, RecoilAttr, StatusMoveTypeImmunityAttr, allMoves } from "./move";
 import { ArenaTagType } from "./enums/arena-tag-type";
 import { Stat } from "./pokemon-stat";
 import { PokemonHeldItemModifier } from "../modifier/modifier";
@@ -468,6 +468,23 @@ export class FieldPriorityMoveImmunityAbAttr extends PreDefendAbAttr {
       }
     
     return false;
+  }
+}
+
+export class ExplosiveMoveImmunityAbAttr extends PreDefendAbAttr {
+  applyPreDefend(pokemon: Pokemon, passive: boolean, attacker: Pokemon, move: PokemonMove, cancelled: Utils.BooleanHolder, args: any[]): boolean {
+  
+      if(move.getMove().getAttrs(ExplosiveAttr).length) {
+        cancelled.value = true;
+        return true;
+      }
+    
+    return false;
+  }
+  
+  apply(pokemon: Pokemon, passive: boolean, cancelled: Utils.BooleanHolder, args: any[]): boolean {
+    cancelled.value = true;
+    return true;
   }
 }
 
@@ -2303,10 +2320,13 @@ export function initAbilities() {
       .attr(PreDefendFullHpEndureAbAttr)
       .attr(BlockOneHitKOAbAttr)
       .ignorable(),
-    new Ability(Abilities.DAMP, "Damp (N)", "Prevents the use of explosive moves, such as Self-Destruct, by dampening its surroundings.", 3)
+    new Ability(Abilities.DAMP, "Damp", "Prevents the use of explosive moves, such as Self-Destruct, by dampening its surroundings.", 3)
+      .attr(ExplosiveMoveImmunityAbAttr)
       .ignorable(),
-    new Ability(Abilities.LIMBER, "Limber", "Its limber body protects the Pokémon from paralysis.", 3)
+    new Ability(Abilities.LIMBER, "Limber (P)", "Its limber body protects the Pokémon from paralysis.", 3)
       .attr(StatusEffectImmunityAbAttr, StatusEffect.PARALYSIS)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.PARALYSIS, PostTurnResetStatusAbAttr)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.PARALYSIS, PreSwitchOutResetStatusAbAttr)
       .ignorable(),
     new Ability(Abilities.SAND_VEIL, "Sand Veil", "Boosts the Pokémon's evasiveness in a sandstorm.", 3)
       .attr(BattleStatMultiplierAbAttr, BattleStat.EVA, 1.2)
@@ -2328,14 +2348,18 @@ export function initAbilities() {
       .attr(SuppressWeatherEffectAbAttr),
     new Ability(Abilities.COMPOUND_EYES, "Compound Eyes", "The Pokémon's compound eyes boost its accuracy.", 3)
       .attr(BattleStatMultiplierAbAttr, BattleStat.ACC, 1.3),
-    new Ability(Abilities.INSOMNIA, "Insomnia", "The Pokémon is suffering from insomnia and cannot fall asleep.", 3)
+    new Ability(Abilities.INSOMNIA, "Insomnia (P)", "The Pokémon is suffering from insomnia and cannot fall asleep.", 3)
       .attr(StatusEffectImmunityAbAttr, StatusEffect.SLEEP)
       .attr(BattlerTagImmunityAbAttr, BattlerTagType.DROWSY)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.SLEEP, PostTurnResetStatusAbAttr)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.SLEEP, PreSwitchOutResetStatusAbAttr)
       .ignorable(),
     new Ability(Abilities.COLOR_CHANGE, "Color Change", "The Pokémon's type becomes the type of the move used on it.", 3)
       .attr(PostDefendTypeChangeAbAttr),
     new Ability(Abilities.IMMUNITY, "Immunity", "The immune system of the Pokémon prevents it from getting poisoned.", 3)
       .attr(StatusEffectImmunityAbAttr, StatusEffect.POISON, StatusEffect.TOXIC)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.POISON||pokemon.status?.effect==StatusEffect.TOXIC, PostTurnResetStatusAbAttr)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.POISON||pokemon.status?.effect==StatusEffect.TOXIC, PreSwitchOutResetStatusAbAttr)
       .ignorable(),
     new Ability(Abilities.FLASH_FIRE, "Flash Fire", "Powers up the Pokémon's Fire-type moves if it's hit by one.", 3)
       .attr(TypeImmunityAddBattlerTagAbAttr, Type.FIRE, BattlerTagType.FIRE_BOOST, 1, (pokemon: Pokemon) => !pokemon.status || pokemon.status.effect !== StatusEffect.FREEZE)
@@ -2396,11 +2420,15 @@ export function initAbilities() {
     new Ability(Abilities.INNER_FOCUS, "Inner Focus", "The Pokémon's intensely focused, and that protects the Pokémon from flinching.", 3)
       .attr(BattlerTagImmunityAbAttr, BattlerTagType.FLINCHED)
       .ignorable(),
-    new Ability(Abilities.MAGMA_ARMOR, "Magma Armor", "The Pokémon is covered with hot magma, which prevents the Pokémon from becoming frozen.", 3)
+    new Ability(Abilities.MAGMA_ARMOR, "Magma Armor (P)", "The Pokémon is covered with hot magma, which prevents the Pokémon from becoming frozen.", 3)
       .attr(StatusEffectImmunityAbAttr, StatusEffect.FREEZE)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.FREEZE, PostTurnResetStatusAbAttr)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.FREEZE, PreSwitchOutResetStatusAbAttr)
       .ignorable(),
-    new Ability(Abilities.WATER_VEIL, "Water Veil", "The Pokémon is covered with a water veil, which prevents the Pokémon from getting a burn.", 3)
+    new Ability(Abilities.WATER_VEIL, "Water Veil (P)", "The Pokémon is covered with a water veil, which prevents the Pokémon from getting a burn.", 3)
       .attr(StatusEffectImmunityAbAttr, StatusEffect.BURN)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.BURN, PostTurnResetStatusAbAttr)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.BURN, PreSwitchOutResetStatusAbAttr)
       .ignorable(),
     new Ability(Abilities.MAGNET_PULL, "Magnet Pull (N)", "Prevents Steel-type Pokémon from escaping using its magnetic force.", 3)
       /*.attr(ArenaTrapAbAttr)
@@ -2473,9 +2501,11 @@ export function initAbilities() {
       .attr(PostBiomeChangeWeatherChangeAbAttr, WeatherType.SUNNY),
     new Ability(Abilities.ARENA_TRAP, "Arena Trap", "Prevents opposing Pokémon from fleeing.", 3)
       .attr(ArenaTrapAbAttr),
-    new Ability(Abilities.VITAL_SPIRIT, "Vital Spirit", "The Pokémon is full of vitality, and that prevents it from falling asleep.", 3)
+    new Ability(Abilities.VITAL_SPIRIT, "Vital Spirit (P)", "The Pokémon is full of vitality, and that prevents it from falling asleep.", 3)
       .attr(StatusEffectImmunityAbAttr, StatusEffect.SLEEP)
       .attr(BattlerTagImmunityAbAttr, BattlerTagType.DROWSY)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.SLEEP, PostTurnResetStatusAbAttr)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.SLEEP, PreSwitchOutResetStatusAbAttr)
       .ignorable(),
     new Ability(Abilities.WHITE_SMOKE, "White Smoke", "The Pokémon is protected by its white smoke, which prevents other Pokémon from lowering its stats.", 3)
       .attr(ProtectStatAbAttr)
@@ -2790,10 +2820,12 @@ export function initAbilities() {
       .attr(UnsuppressableAbilityAbAttr)
       .attr(NoFusionAbilityAbAttr),
     new Ability(Abilities.STAKEOUT, "Stakeout (N)", "Doubles the damage dealt to the target's replacement if the target switches out.", 7),
-    new Ability(Abilities.WATER_BUBBLE, "Water Bubble", "Lowers the power of Fire-type moves done to the Pokémon and prevents the Pokémon from getting a burn.", 7)
+    new Ability(Abilities.WATER_BUBBLE, "Water Bubble (P)", "Lowers the power of Fire-type moves done to the Pokémon and prevents the Pokémon from getting a burn.", 7)
       .attr(ReceivedTypeDamageMultiplierAbAttr, Type.FIRE, 0.5)
       .attr(MoveTypePowerBoostAbAttr, Type.WATER, 1)
       .attr(StatusEffectImmunityAbAttr, StatusEffect.BURN)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.BURN, PostTurnResetStatusAbAttr)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.BURN, PreSwitchOutResetStatusAbAttr)
       .ignorable(),
     new Ability(Abilities.STEELWORKER, "Steelworker", "Powers up Steel-type moves.", 7)
       .attr(MoveTypePowerBoostAbAttr, Type.STEEL),
@@ -2958,8 +2990,10 @@ export function initAbilities() {
       .attr(UncopiableAbilityAbAttr)
       .attr(UnswappableAbilityAbAttr)
       .attr(NoTransformAbilityAbAttr),
-    new Ability(Abilities.PASTEL_VEIL, "Pastel Veil", "Protects the Pokémon and its ally Pokémon from being poisoned.", 8)
+    new Ability(Abilities.PASTEL_VEIL, "Pastel Veil (P)", "Protects the Pokémon and its ally Pokémon from being poisoned.", 8)
       .attr(StatusEffectImmunityAbAttr, StatusEffect.POISON, StatusEffect.TOXIC)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.POISON||pokemon.status?.effect==StatusEffect.TOXIC, PostTurnResetStatusAbAttr)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.POISON||pokemon.status?.effect==StatusEffect.TOXIC, PreSwitchOutResetStatusAbAttr)
       .ignorable(),
     new Ability(Abilities.HUNGER_SWITCH, "Hunger Switch", "The Pokémon changes its form, alternating between its Full Belly Mode and Hangry Mode after the end of each turn.", 8)
       .attr(PostTurnFormChangeAbAttr, p => p.getFormKey ? 0 : 1)
@@ -2996,9 +3030,11 @@ export function initAbilities() {
       .bypassFaint(),
     new Ability(Abilities.SEED_SOWER, "Seed Sower", "Turns the ground into Grassy Terrain when the Pokémon is hit by an attack.", 9)
       .attr(PostDefendTerrainChangeAbAttr, TerrainType.GRASSY),
-    new Ability(Abilities.THERMAL_EXCHANGE, "Thermal Exchange", "Boosts the Attack stat when the Pokémon is hit by a Fire-type move. The Pokémon also cannot be burned.", 9)
+    new Ability(Abilities.THERMAL_EXCHANGE, "Thermal Exchange (P)", "Boosts the Attack stat when the Pokémon is hit by a Fire-type move. The Pokémon also cannot be burned.", 9)
       .attr(PostDefendStatChangeAbAttr, (target, user, move) => move.type === Type.FIRE && move.category !== MoveCategory.STATUS, BattleStat.ATK, 1)
       .attr(StatusEffectImmunityAbAttr, StatusEffect.BURN)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.BURN, PostTurnResetStatusAbAttr)
+      .conditionalAttr(pokemon => pokemon.status?.effect==StatusEffect.BURN, PreSwitchOutResetStatusAbAttr)
       .ignorable(),
     new Ability(Abilities.ANGER_SHELL, "Anger Shell (N)", "When an attack causes its HP to drop to half or less, the Pokémon gets angry. This lowers its Defense and Sp. Def stats but boosts its Attack, Sp. Atk, and Speed stats.", 9),
     new Ability(Abilities.PURIFYING_SALT, "Purifying Salt", "The Pokémon's pure salt protects it from status conditions and halves the damage taken from Ghost-type moves.", 9)
